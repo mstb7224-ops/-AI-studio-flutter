@@ -1,0 +1,84 @@
+name: Build Flutter Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: APK build type
+        required: true
+        default: release
+        type: choice
+        options:
+          - release
+          - debug
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flutter-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Analyze, test, and build APK
+    runs-on: ubuntu-latest
+    env:
+      BUILD_TYPE: ${{ inputs.build_type || 'release' }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate Android platform files when needed
+        shell: bash
+        run: |
+          if [ ! -d android ]; then
+            flutter create --platforms=android --project-name ai_studio --org online.dailyglow .
+          fi
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Check formatting
+        run: dart format lib test
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Build APK
+        shell: bash
+        run: |
+          if [ "$BUILD_TYPE" = "debug" ]; then
+            flutter build apk --debug \
+              --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+              --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
+          else
+            flutter build apk --release \
+              --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+              --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
+          fi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dailyglo-${{ env.BUILD_TYPE }}-apk-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/*.apk
+          if-no-files-found: error
+          retention-days: 14
