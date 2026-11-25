@@ -71,8 +71,9 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<AuthState>(
       stream: client.auth.onAuthStateChange,
       builder: (context, snapshot) {
-        if (!snapshot.hasData && client.auth.currentSession == null)
+        if (!snapshot.hasData && client.auth.currentSession == null) {
           return const SplashPage();
+        }
         final session = snapshot.data?.session ?? client.auth.currentSession;
         return session == null ? const HomePage() : const DashboardPage();
       },
@@ -220,20 +221,23 @@ class _AuthPageState extends State<AuthPage> {
           'city': city.text.trim(),
           'country': country
         });
-        if (result.user == null)
+        if (result.user == null) {
           throw AuthException('Supabase did not create the account.');
-        if (result.session == null)
+        }
+        if (result.session == null) {
           throw AuthException(
               'Account created. Email confirmation is enabled; confirm the account before logging in.');
+        }
         await client.from('members').upsert({
           'id': result.user!.id,
           'email': email,
           'mobile': mobile.text.trim(),
           'user_type': 'free'
         }, onConflict: 'id');
-        if (mounted)
+        if (mounted) {
           showMessage(context, 'Registration successful. You can now log in.',
               error: false);
+        }
       } else {
         var email = emailOrMobile.text.trim();
         if (!email.contains('@')) {
@@ -462,18 +466,21 @@ class _PaymentPageState extends State<PaymentPage> {
           .eq('code', code)
           .eq('active', true)
           .maybeSingle();
-      if (row == null)
+      if (row == null) {
         throw PostgrestException(message: 'Discount code is not active.');
+      }
       final expires = row['expires_at'] == null
           ? null
           : DateTime.tryParse(row['expires_at'].toString());
       final maxUses = row['max_uses'] as int?;
       final used = (row['used_count'] as num?)?.toInt() ?? 0;
-      if (expires != null && expires.isBefore(DateTime.now().toUtc()))
+      if (expires != null && expires.isBefore(DateTime.now().toUtc())) {
         throw PostgrestException(message: 'Discount code has expired.');
-      if (maxUses != null && used >= maxUses)
+      }
+      if (maxUses != null && used >= maxUses) {
         throw PostgrestException(
             message: 'Discount code has reached its usage limit.');
+      }
       setState(() => discountPercent = (row['percent_off'] as num).toDouble());
       showMessage(context,
           'Discount applied: ${discountPercent.toStringAsFixed(0)}% off.',
@@ -489,8 +496,9 @@ class _PaymentPageState extends State<PaymentPage> {
         await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
     if (image == null) return;
     final bytes = await image.readAsBytes();
-    if (bytes.length > 5 * 1024 * 1024)
+    if (bytes.length > 5 * 1024 * 1024) {
       return showMessage(context, 'Screenshot must be 5 MB or smaller.');
+    }
     setState(() {
       screenshot = image;
       screenshotBytes = bytes;
@@ -500,13 +508,16 @@ class _PaymentPageState extends State<PaymentPage> {
   Future<void> submit() async {
     final ref = reference.text.trim();
     final paid = double.tryParse(amountPaid.text.trim());
-    if (!RegExp(r'^\d{4}$').hasMatch(ref))
+    if (!RegExp(r'^\d{4}$').hasMatch(ref)) {
       return showMessage(context,
           'Enter exactly the last four digits of the transaction reference.');
-    if (paid == null || paid <= 0)
+    }
+    if (paid == null || paid <= 0) {
       return showMessage(context, 'Enter the amount actually sent.');
-    if (method != 'bkash' && screenshotBytes == null)
+    }
+    if (method != 'bkash' && screenshotBytes == null) {
       return showMessage(context, 'Choose the bank payment screenshot.');
+    }
     setState(() => loading = true);
     String? path;
     try {
@@ -537,9 +548,10 @@ class _PaymentPageState extends State<PaymentPage> {
         'transaction_reference': ref,
         'screenshot_url': path
       });
-      if (mounted)
+      if (mounted) {
         showMessage(context, 'Payment submitted and is awaiting admin review.',
             error: false);
+      }
       reference.clear();
       amountPaid.text = finalAmount.toStringAsFixed(0);
       discountCode.clear();
@@ -659,13 +671,16 @@ class _PredictionsPageState extends State<PredictionsPage> {
         body: FutureBuilder<List<Map<String, dynamic>>>(
           future: load(),
           builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done)
+            if (snapshot.connectionState != ConnectionState.done) {
               return const Center(child: CircularProgressIndicator());
-            if (snapshot.hasError)
+            }
+            if (snapshot.hasError) {
               return Center(child: Text(friendlyError(snapshot.error!)));
+            }
             final rows = snapshot.data ?? [];
-            if (rows.isEmpty)
+            if (rows.isEmpty) {
               return const Center(child: Text('No published predictions yet.'));
+            }
             return ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: rows.length,
