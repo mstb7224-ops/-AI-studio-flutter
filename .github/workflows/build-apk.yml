@@ -66,13 +66,9 @@ jobs:
         shell: bash
         run: |
           if [ "$BUILD_TYPE" = "debug" ]; then
-            flutter build apk --debug \
-              --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-              --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
+            flutter build apk --debug --dart-define="SUPABASE_URL=$SUPABASE_URL" --dart-define="SUPABASE_PUBLISHABLE_KEY=$SUPABASE_PUBLISHABLE_KEY"
           else
-            flutter build apk --release \
-              --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-              --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
+            flutter build apk --release --dart-define="SUPABASE_URL=$SUPABASE_URL" --dart-define="SUPABASE_PUBLISHABLE_KEY=$SUPABASE_PUBLISHABLE_KEY"
           fi
 
       - name: Upload APK artifact
